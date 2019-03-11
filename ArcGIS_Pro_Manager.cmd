@@ -31,7 +31,7 @@ setlocal enableextensions
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=ArcGIS_Pro_Manager
-SET SCRIPT_VERSION=1.1.0
+SET SCRIPT_VERSION=1.1.1
 SET SCRIPT_BUILD=0012
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 Prompt AGM$G
@@ -55,7 +55,7 @@ SET "PACKAGE_DESTINATION=%PUBLIC%\Downloads"
 ::	Advise local storage for logging.
 SET LOG_LOCATION=%PUBLIC%\Logs
 ::	Advise the default log file name.
-SET LOG_FILE=ArcGIS_Pro_Manager_%COMPUTERNAME%.log
+SET LOG_FILE=%COMPUTERNAME%_ArcGIS_Pro_Manager.log
 :: Log Shipping
 ::	Advise network file share location
 SET "LOG_SHIPPING_LOCATION=\\SC-Vanadium\Logs\ArcGISPro"
