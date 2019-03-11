@@ -31,8 +31,8 @@ setlocal enableextensions
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=ArcGIS_Pro_Manager
-SET SCRIPT_VERSION=1.0.1
-SET SCRIPT_BUILD=0011
+SET SCRIPT_VERSION=1.1.0
+SET SCRIPT_BUILD=0012
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 Prompt AGM$G
 color 0B
@@ -224,7 +224,7 @@ SET ISO_DATE=%ISO_YEAR%-%ISO_MONTH%-%ISO_DAY%
 
 
 :start
-ECHO. >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\%LOG_FILE%" ECHO. >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [INFO]	START... >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\var\var_systeminfo_TimeZone.txt (
 	FOR /F "tokens=2-3 delims=(" %%S IN ('systeminfo ^| FIND /I "Time Zone"') Do ECHO Time Zone: ^(%%S^(%%T > %LOG_LOCATION%\var\var_systeminfo_TimeZone.txt
@@ -263,6 +263,7 @@ SET /P ARCGISPRO_FOLDER= < %LOG_LOCATION%\var\var_ArcGISPro_FOLDER.txt
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ARCGISPRO_FOLDER: %ARCGISPRO_FOLDER% >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Check if installer should run
+ECHO %ISO_DATE% %TIME% [INFO]	Checking if the ArcGIS Pro installer should run... >> %LOG_LOCATION%\%LOG_FILE%
 IF ARCGISPRO_VERSION EQU 0 GoTo skipAPcheck
 FOR /F "tokens=2 delims=_" %%P IN ("%ARCGISPRO_FOLDER%") DO SET ARCGISPRO_FOLDER_NUMBER=%%P
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ARCGISPRO_FOLDER_NUMBER: %ARCGISPRO_FOLDER_NUMBER% >> %LOG_LOCATION%\%LOG_FILE%
@@ -282,7 +283,15 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	ARCGIS_INSTALL_ERROR: %ARCGIS_INSTALL_ERROR% >> %
 :skipAP
 
 :: Execute the update package
-ECHO %ISO_DATE% %TIME% [INFO]	Installing ArcGIS Pro updates... >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [INFO]	Checking if patch installer should run... >> %LOG_LOCATION%\%LOG_FILE%
+
+FOR /F "tokens=3-5 delims=()." %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Updates /S /v "NAME"') DO ECHO %%P%%Q%%R >> %LOG_LOCATION%\var\VAR_ArcGISPro_Updated_REGKEY_Result.txt
+SET /P $STRING= < %LOG_LOCATION%\var\var_ArcGISPro_Updated_REGKEY_Result.txt
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: VAR_ARCGISPRO_UPDATED_REGKEY_RESULT: %$STRING% >> %LOG_LOCATION%\%LOG_FILE%
+:: This line is not working. Something is up with the 2nd pipe with FIND
+(DIR /B /A:-D "%PACKAGE_SOURCE%" | FIND /I "msp" | FIND /I "%$STRING%") && GoTo skipAPP
+
+ECHO %ISO_DATE% %TIME% [INFO]	Installing ArcGIS Pro patches... >> %LOG_LOCATION%\%LOG_FILE%
 dir /B /A:-D "%PACKAGE_SOURCE%" | FIND /I "msp" > %LOG_LOCATION%\var\var_ArcGISPro_updatePackage.txt
 SET /P ARCGISPRO_UPDATE_PACKAGE= < %LOG_LOCATION%\var\var_ArcGISPro_updatePackage.txt
 REM See if the MSI log file already exists, and if it does change it to UTF-8 encoding so FINDSTR can work.
