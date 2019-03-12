@@ -3,15 +3,13 @@
 :: Location:	Olympia, Washington USA
 :: E-Mail:		geeraerd@evergreen.edu
 ::
-::	Copyleft License
-:: 	Creative Commons: Attribution-NonCommercial-ShareAlike 3.0 Unported (CC BY-NC-SA 3.0)  
-:: 	http://creativecommons.org/licenses/by-nc-sa/3.0/
+::
+:: Copyleft License(s)
+:: GNU GPL (General Public License)
+:: https://www.gnu.org/licenses/gpl-3.0.en.html
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:::::::::::::::::::::::::::
-@Echo Off
-setlocal enableextensions
-:::::::::::::::::::::::::::
 
 ::#############################################################################
 ::							#DESCRIPTION#
@@ -28,11 +26,15 @@ setlocal enableextensions
 ::	Added BUILD number which is used during development and testing.
 ::#############################################################################
 
+:::::::::::::::::::::::::::
+@Echo Off
+setlocal enableextensions
+:::::::::::::::::::::::::::
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=ArcGIS_Pro_Manager
-SET SCRIPT_VERSION=1.1.1
-SET SCRIPT_BUILD=0012
+SET SCRIPT_VERSION=1.2.0
+SET SCRIPT_BUILD=0013
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 Prompt AGM$G
 color 0B
@@ -245,15 +247,17 @@ IF %ADMIN_STATUS% EQU 0 ECHO %ISO_DATE% %TIME% [DEBUG]	Running with administrati
 IF %ADMIN_STATUS% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Not running with administrative privilege! >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Get the currently installed version of ArcGIS Pro
-FOR /F "tokens=3 delims= " %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro /V REALVERSION') DO ECHO %%P > %LOG_LOCATION%\var\var_ArcGISPro_version.txt
-SET /P ARCGISPRO_VERSION= < "%LOG_LOCATION%\var\var_ArcGISPro_Version.txt"
-ECHO %ISO_DATE% %TIME% [INFO]	Currently installed ARCGISPRO Version: %ARCGISPRO_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
+(FOR /F "tokens=3 delims= " %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro /V REALVERSION') DO ECHO %%P > %LOG_LOCATION%\var\var_ArcGISPro_version.txt) 2> nul
+IF EXIST "%LOG_LOCATION%\var\var_ArcGISPro_Version.txt" SET /P ARCGISPRO_VERSION= < "%LOG_LOCATION%\var\var_ArcGISPro_Version.txt"
+IF DEFINED ARCGISPRO_VERSION ECHO %ISO_DATE% %TIME% [INFO]	Currently installed ARCGISPRO Version: %ARCGISPRO_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT DEFINED ARCGISPRO_VERSION ECHO %ISO_DATE% %TIME% [INFO]	ArcGIS Pro not installed! First time installation! >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT DEFINED ARCGISPRO_VERSION SET ARCGISPRO_VERSION=0
 
 :: Get the currently installed updates of ArcGIS Pro
-FOR /F "tokens=6 delims=\" %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Updates') DO ECHO %%P > %LOG_LOCATION%\var\var_ArcGISPro_Update.txt
-SET /P ARCGISPRO_UPDATE= < "%LOG_LOCATION%\var\var_ArcGISPro_Update.txt"
-ECHO %ISO_DATE% %TIME% [INFO]	Currently installed ARCGISPRO Patch: %ARCGISPRO_UPDATE% >> %LOG_LOCATION%\%LOG_FILE%
+(FOR /F "tokens=6 delims=\" %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Updates') DO ECHO %%P > %LOG_LOCATION%\var\var_ArcGISPro_Update.txt) 2> nul
+IF EXIST "%LOG_LOCATION%\var\var_ArcGISPro_Update.txt" SET /P ARCGISPRO_UPDATE= < "%LOG_LOCATION%\var\var_ArcGISPro_Update.txt"
+IF DEFINED ARCGISPRO_UPDATE ECHO %ISO_DATE% %TIME% [INFO]	Currently installed ARCGISPRO Patch: %ARCGISPRO_UPDATE% >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT DEFINED ARCGISPRO_UPDATE ECHO %ISO_DATE% %TIME% [INFO]	ArcGIS Pro patches not installed! >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT DEFINED ARCGISPRO_UPDATE SET ARCGISPRO_UPDATE=0
 
 
@@ -284,19 +288,21 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	ARCGIS_INSTALL_ERROR: %ARCGIS_INSTALL_ERROR% >> %
 
 :: Execute the update package
 ECHO %ISO_DATE% %TIME% [INFO]	Checking if patch installer should run... >> %LOG_LOCATION%\%LOG_FILE%
-
-FOR /F "tokens=3-5 delims=()." %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Updates /S /v "NAME"') DO ECHO %%P%%Q%%R >> %LOG_LOCATION%\var\VAR_ArcGISPro_Updated_REGKEY_Result.txt
-SET /P $STRING= < %LOG_LOCATION%\var\var_ArcGISPro_Updated_REGKEY_Result.txt
+:: Find and define the update package
+dir /B /A:-D "%PACKAGE_SOURCE%" | FIND /I "msp" > %LOG_LOCATION%\var\var_ArcGISPro_updatePackage.txt
+SET /P ARCGISPRO_UPDATE_PACKAGE= < %LOG_LOCATION%\var\var_ArcGISPro_updatePackage.txt
+IF DEFINED ARCGISPRO_UPDATE_PACKAGE ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ARCGISPRO_UPDATE_PACKAGE: %ARCGISPRO_UPDATE_PACKAGE% >> %LOG_LOCATION%\%LOG_FILE%
+REM See if the MSI log file already exists, and if it does change it to UTF-8 encoding so FINDSTR can work.
+IF EXIST "%LOG_LOCATION%\%ARCGISPRO_UPDATE_PACKAGE%.log" (@powershell Get-Content -Path "%LOG_LOCATION%\%ARCGISPRO_UPDATE_PACKAGE%.log" | @powershell Set-Content -Path "%LOG_LOCATION%\%ARCGISPRO_UPDATE_PACKAGE%.log" -Encoding UTF8)
+IF EXIST "%LOG_LOCATION%\%ARCGISPRO_UPDATE_PACKAGE%.log" FINDSTR /I /C:"Configuration completed successfully." "%LOG_LOCATION%\%ARCGISPRO_UPDATE_PACKAGE%.log" && GoTo skipAPP
+:: Check registry on updates and compare to package update.
+(FOR /F "tokens=3-5 delims=()." %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Updates /S /v "NAME"') DO ECHO %%P%%Q%%R >> %LOG_LOCATION%\var\VAR_ArcGISPro_Updated_REGKEY_Result.txt) 2> nul
+IF EXIST "%LOG_LOCATION%\var\var_ArcGISPro_Updated_REGKEY_Result.txt" SET /P $STRING= < %LOG_LOCATION%\var\var_ArcGISPro_Updated_REGKEY_Result.txt
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: VAR_ARCGISPRO_UPDATED_REGKEY_RESULT: %$STRING% >> %LOG_LOCATION%\%LOG_FILE%
 :: This line is not working. Something is up with the 2nd pipe with FIND
 (DIR /B /A:-D "%PACKAGE_SOURCE%" | FIND /I "msp" | FIND /I "%$STRING%") && GoTo skipAPP
 
-ECHO %ISO_DATE% %TIME% [INFO]	Installing ArcGIS Pro patches... >> %LOG_LOCATION%\%LOG_FILE%
-dir /B /A:-D "%PACKAGE_SOURCE%" | FIND /I "msp" > %LOG_LOCATION%\var\var_ArcGISPro_updatePackage.txt
-SET /P ARCGISPRO_UPDATE_PACKAGE= < %LOG_LOCATION%\var\var_ArcGISPro_updatePackage.txt
-REM See if the MSI log file already exists, and if it does change it to UTF-8 encoding so FINDSTR can work.
-IF EXIST "%LOG_LOCATION%\%ARCGISPRO_UPDATE_PACKAGE%.log" (@powershell Get-Content -Path "%LOG_LOCATION%\%ARCGISPRO_UPDATE_PACKAGE%.log" | @powershell Set-Content -Path "%LOG_LOCATION%\%ARCGISPRO_UPDATE_PACKAGE%.log" -Encoding UTF8)
-FINDSTR /I /C:"Configuration completed successfully." "%LOG_LOCATION%\%ARCGISPRO_UPDATE_PACKAGE%.log" && GoTo skipAPP
+ECHO %ISO_DATE% %TIME% [INFO]	Installing ArcGIS Pro [%ARCGISPRO_UPDATE_PACKAGE%] patches... >> %LOG_LOCATION%\%LOG_FILE%
 IF DEFINED ARCGISPRO_UPDATE_PACKAGE msiexec /L "%LOG_LOCATION%\%ARCGISPRO_UPDATE_PACKAGE%.log" /P "%PACKAGE_SOURCE%\%ARCGISPRO_UPDATE_PACKAGE%" /qb
 SET ARCGIS_UPDATE_ERROR=%ERRORLEVEL%
 ECHO %ISO_DATE% %TIME% [DEBUG]	ARCGIS_UPDATE_ERROR: %ARCGIS_UPDATE_ERROR% >> %LOG_LOCATION%\%LOG_FILE%
