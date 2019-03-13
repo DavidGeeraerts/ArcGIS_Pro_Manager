@@ -33,7 +33,7 @@ setlocal enableextensions
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=ArcGIS_Pro_Manager
-SET SCRIPT_VERSION=1.2.0
+SET SCRIPT_VERSION=1.2.1
 SET SCRIPT_BUILD=0013
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 Prompt AGM$G
@@ -249,14 +249,14 @@ IF %ADMIN_STATUS% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Not running with administ
 :: Get the currently installed version of ArcGIS Pro
 (FOR /F "tokens=3 delims= " %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro /V REALVERSION') DO ECHO %%P > %LOG_LOCATION%\var\var_ArcGISPro_version.txt) 2> nul
 IF EXIST "%LOG_LOCATION%\var\var_ArcGISPro_Version.txt" SET /P ARCGISPRO_VERSION= < "%LOG_LOCATION%\var\var_ArcGISPro_Version.txt"
-IF DEFINED ARCGISPRO_VERSION ECHO %ISO_DATE% %TIME% [INFO]	Currently installed ARCGISPRO Version: %ARCGISPRO_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
+IF DEFINED ARCGISPRO_VERSION ECHO %ISO_DATE% %TIME% [INFO]	Found ARCGISPRO Version: %ARCGISPRO_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT DEFINED ARCGISPRO_VERSION ECHO %ISO_DATE% %TIME% [INFO]	ArcGIS Pro not installed! First time installation! >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT DEFINED ARCGISPRO_VERSION SET ARCGISPRO_VERSION=0
 
 :: Get the currently installed updates of ArcGIS Pro
 (FOR /F "tokens=6 delims=\" %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Updates') DO ECHO %%P > %LOG_LOCATION%\var\var_ArcGISPro_Update.txt) 2> nul
 IF EXIST "%LOG_LOCATION%\var\var_ArcGISPro_Update.txt" SET /P ARCGISPRO_UPDATE= < "%LOG_LOCATION%\var\var_ArcGISPro_Update.txt"
-IF DEFINED ARCGISPRO_UPDATE ECHO %ISO_DATE% %TIME% [INFO]	Currently installed ARCGISPRO Patch: %ARCGISPRO_UPDATE% >> %LOG_LOCATION%\%LOG_FILE%
+IF DEFINED ARCGISPRO_UPDATE ECHO %ISO_DATE% %TIME% [INFO]	Found ARCGISPRO Patch: %ARCGISPRO_UPDATE% >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT DEFINED ARCGISPRO_UPDATE ECHO %ISO_DATE% %TIME% [INFO]	ArcGIS Pro patches not installed! >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT DEFINED ARCGISPRO_UPDATE SET ARCGISPRO_UPDATE=0
 
@@ -311,13 +311,13 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	ARCGIS_UPDATE_ERROR: %ARCGIS_UPDATE_ERROR% >> %LO
 :: Get the currently installed version of ArcGIS Pro
 FOR /F "tokens=3 delims= " %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro /V REALVERSION') DO ECHO %%P > %LOG_LOCATION%\var\var_ArcGISPro_version.txt
 SET /P ARCGISPRO_VERSION= < "%LOG_LOCATION%\var\var_ArcGISPro_Version.txt"
-ECHO %ISO_DATE% %TIME% [INFO]	Installed ARCGISPRO Version: %ARCGISPRO_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [INFO]	Current ARCGISPRO Version: %ARCGISPRO_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
 
 
 :: Get the updated version of ArcGIS Pro
 FOR /F "tokens=6 delims=\" %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Updates') DO ECHO %%P > %LOG_LOCATION%\var\var_ArcGISPro_Patch.txt
 SET /P ARCGISPRO_PATCH= < "%LOG_LOCATION%\var\var_ArcGISPro_Patch.txt"
-ECHO %ISO_DATE% %TIME% [INFO]	ARCGISPRO Patch: %ARCGISPRO_PATCH% >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [INFO]	Current ARCGISPRO Patch: %ARCGISPRO_PATCH% >> %LOG_LOCATION%\%LOG_FILE%
 
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
