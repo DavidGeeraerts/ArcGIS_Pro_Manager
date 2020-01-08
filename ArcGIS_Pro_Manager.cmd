@@ -34,8 +34,8 @@ setlocal enableextensions
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 SET SCRIPT_NAME=ArcGIS_Pro_Manager
-SET SCRIPT_VERSION=1.3.0
-SET SCRIPT_BUILD=20191122-0721
+SET SCRIPT_VERSION=1.3.1
+SET SCRIPT_BUILD=20200106-1006
 Title %SCRIPT_NAME% %SCRIPT_VERSION%
 Prompt AGPM$G
 color 0B
@@ -128,7 +128,7 @@ SET $CHECKFORUPDATESATSTARTUP=0
 ::	Specifies the host name of the license manager. Multiple license servers
 ::	can be defined by separating the host names with a semicolon; for example,
 ::	ESRI_LICENSE_HOST=@primaryLM;@backupLM2;@backupLM3
-SET $ESRI_LICENSE_HOST=
+SET $ESRI_LICENSE_HOST=@ac-arc10-lic
 
 ::	Can be Viewer, Editor, or Professional.
 SET $SOFTWARE_CLASS=Professional
