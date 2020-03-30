@@ -34,8 +34,8 @@ setlocal enableextensions
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 SET SCRIPT_NAME=ArcGIS_Pro_Manager
-SET SCRIPT_VERSION=1.3.2
-SET SCRIPT_BUILD=20200122-0844
+SET SCRIPT_VERSION=1.4.0
+SET SCRIPT_BUILD=20200330-1047
 Title %SCRIPT_NAME% %SCRIPT_VERSION%
 Prompt AGPM$G
 color 0B
@@ -309,7 +309,7 @@ IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ARCGISPRO_FO
 
 :: Check if installer should run
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Checking if the ArcGIS Pro installer should run... >> %LOG_LOCATION%\%LOG_FILE%
-IF ARCGISPRO_VERSION EQU 0 GoTo skipAPcheck
+IF %ARCGISPRO_VERSION% EQU 0 GoTo skipAPcheck
 FOR /F "tokens=2 delims=_" %%P IN ("%ARCGISPRO_FOLDER%") DO SET ARCGISPRO_FOLDER_NUMBER=%%P
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ARCGISPRO_FOLDER_NUMBER: %ARCGISPRO_FOLDER_NUMBER% >> %LOG_LOCATION%\%LOG_FILE%
 IF %ARCGISPRO_FOLDER_NUMBER% EQU %ARCGISPRO_VERSION% IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	ArcGIS Pro already installed to version %ARCGISPRO_FOLDER_NUMBER% >> %LOG_LOCATION%\%LOG_FILE%
@@ -320,7 +320,9 @@ IF %ARCGISPRO_FOLDER_NUMBER% EQU %ARCGISPRO_VERSION% GoTo skipAP
 :: Copy the installers locally
 ECHO Downloading packages (be patient)...
 ROBOCOPY "%PACKAGE_SOURCE%\%ARCGISPRO_FOLDER%" "%PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%" /S /E /NP /NDL /NFL /R:2 /W:5 /LOG+:"%LOG_LOCATION%\%LOG_FILE%"
-
+:: Installation Prep
+::	Fix orphaned ArcGIS file in Start Menu
+IF EXIST "%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\ArcGIS" del /S /Q /F "%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\ArcGIS"
 :: Execute the installer
 ECHO Installing ArcGIS Pro latest version...
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Installing ArcGIS Pro latest version... >> %LOG_LOCATION%\%LOG_FILE%
