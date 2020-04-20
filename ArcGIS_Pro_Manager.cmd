@@ -34,8 +34,8 @@ setlocal enableextensions
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 SET SCRIPT_NAME=ArcGIS_Pro_Manager
-SET SCRIPT_VERSION=1.4.0
-SET SCRIPT_BUILD=20200330-1047
+SET SCRIPT_VERSION=1.5.0
+SET SCRIPT_BUILD=20200420-1035
 Title %SCRIPT_NAME% %SCRIPT_VERSION%
 Prompt AGPM$G
 color 0B
@@ -53,6 +53,7 @@ mode con:lines=45
 ::	PACKAGE_SOURCE is where the unpacked folder for ArcGIS is located
 ::	consider this the repository location, where the staging folder is located.
 ::	Inside the folder should contain the ArcGISPro.msi
+::	NETWORK REPOSITORY
 SET "PACKAGE_SOURCE=\\Orca\research\Software\ESRI\ArcGIS_Pro"
 SET "PACKAGE_DESTINATION=%PUBLIC%\Downloads"
 
@@ -63,6 +64,7 @@ SET "LOG_LOCATION=%PUBLIC%\Logs"
 SET LOG_FILE=ArcGIS_Pro_Manager_%COMPUTERNAME%.log
 :: Log Shipping
 ::	Advise network file share location
+::	if no log server, leave blank
 SET "LOG_SHIPPING_LOCATION=\\SC-Vanadium\Logs\ArcGISPro"
 
 :: Cleanup staging and var 
@@ -137,7 +139,7 @@ SET $SOFTWARE_CLASS=Professional
 ::	CONCURRENT_USE to install as a Concurrent Use seat;
 ::	and NAMED_USER for a Named User license.
 ::	{SINGLE_USE, Concurrent_USE, NAMED_USER}
-SET $AUTHORIZATION_TYPE=NAMED_USER
+SET $AUTHORIZATION_TYPE=CONCURRENT_USE
 
 ::	During a silent, per-machine installation of ArcGIS Pro, if the
 ::	authorization type is defined, this is set to True under
@@ -285,6 +287,18 @@ IF %LOG_LEVEL_DEBUG% EQU 1 IF %ADMIN_STATUS% EQU 0 ECHO %ISO_DATE% %TIME% [DEBUG
 IF %ADMIN_STATUS% EQU 1 IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Not running with administrative privilege! >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:: If network Repo, check user is domain user
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: User status checking... >> %LOG_LOCATION%\%LOG_FILE%
+IF DEFINED PACKAGE_SOURCE (echo %PACKAGE_SOURCE% | FIND "\\") & (SET DOMAIN_USER_REQ=%ERRORLEVEL%)
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: DOMAIN_USER_REQ: %DOMAIN_USER_REQ% >> %LOG_LOCATION%\%LOG_FILE%
+:: Should be a domain user is PACAKGE_SOURCE configured as SMB
+IF %DOMAIN_USER_REQ% EQU 0 IF %USERDOMAIN%==%COMPUTERNAME% SET LOCAL_USER=1
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOCAL_USER: %LOCAL_USER% >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	User is not a domain user, but Remote Repo configured! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOCAL_USER% EQU 1 GoTo postCheck
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: User status checking. >> %LOG_LOCATION%\%LOG_FILE%
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 :: Get the currently installed version of ArcGIS Pro
 (FOR /F "tokens=3 delims= " %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro /V REALVERSION') DO ECHO %%P > %LOG_LOCATION%\var\var_ArcGISPro_version.txt) 2> nul
 IF EXIST "%LOG_LOCATION%\var\var_ArcGISPro_Version.txt" SET /P ARCGISPRO_VERSION= < "%LOG_LOCATION%\var\var_ArcGISPro_Version.txt"
@@ -317,6 +331,7 @@ IF %ARCGISPRO_FOLDER_NUMBER% EQU %ARCGISPRO_VERSION% GoTo skipAP
 :skipAPcheck
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+
 :: Copy the installers locally
 ECHO Downloading packages (be patient)...
 ROBOCOPY "%PACKAGE_SOURCE%\%ARCGISPRO_FOLDER%" "%PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%" /S /E /NP /NDL /NFL /R:2 /W:5 /LOG+:"%LOG_LOCATION%\%LOG_FILE%"
@@ -326,7 +341,7 @@ IF EXIST "%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\ArcGIS" del /S /Q 
 :: Execute the installer
 ECHO Installing ArcGIS Pro latest version...
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Installing ArcGIS Pro latest version... >> %LOG_LOCATION%\%LOG_FILE%
-IF DEFINED ARCGISPRO_FOLDER msiexec /i "%PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%\ArcGISPro.msi" INSTALLDIR="%$INSTALLDIR%" ALLUSERS=%$ALLUSERS% ENABLEEUEI=%$ENABLEEUEI% BLOCKADDINS=%$BLOCKADDINS% CHECKFORUPDATESATSTARTUP=%$CHECKFORUPDATESATSTARTUP% ESRI_LICENSE_HOST=%$ESRI_LICENSE_HOST% SOFTWARE_CLASS=%$SOFTWARE_CLASS% AUTHORIZATION_TYPE=%$AUTHORIZATION_TYPE% LOCK_AUTH_SETTINGS=%$LOCK_AUTH_SETTINGS% ArcGIS_Connection=%$ArcGIS_Connection% Portal_List="%$Portal_List%" License_URL="%$License_URL%" /qb
+IF DEFINED ARCGISPRO_FOLDER msiexec /i "%PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%\ArcGISPro.msi" INSTALLDIR="%$INSTALLDIR%" ALLUSERS=%$ALLUSERS% ENABLEEUEI=%$ENABLEEUEI% BLOCKADDINS=%$BLOCKADDINS% CHECKFORUPDATESATSTARTUP=%$CHECKFORUPDATESATSTARTUP% ESRI_LICENSE_HOST=^%$ESRI_LICENSE_HOST% SOFTWARE_CLASS=%$SOFTWARE_CLASS% AUTHORIZATION_TYPE=%$AUTHORIZATION_TYPE% LOCK_AUTH_SETTINGS=%$LOCK_AUTH_SETTINGS% ArcGIS_Connection=%$ArcGIS_Connection% Portal_List="%$Portal_List%" License_URL="%$License_URL%" /qb
 SET ARCGISPRO_INSTALL_ERROR=%ERRORLEVEL%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	ARCGIS_INSTALLPRO_ERROR: %ARCGIS_INSTALL_ERROR% >> %LOG_LOCATION%\%LOG_FILE%
 :skipAP
@@ -365,7 +380,7 @@ REM See if the MSI log file already exists, and if it does change it to UTF-8 en
 :skipAPP
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-
+:postCheck
 :: Get the currently installed version of ArcGIS Pro
 FOR /F "tokens=3 delims= " %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro /V REALVERSION') DO ECHO %%P > %LOG_LOCATION%\var\var_ArcGISPro_version.txt
 SET /P ARCGISPRO_VERSION= < "%LOG_LOCATION%\var\var_ArcGISPro_Version.txt"
@@ -377,6 +392,12 @@ FOR /F "tokens=6 delims=\" %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\A
 SET /P ARCGISPRO_PATCH= < "%LOG_LOCATION%\var\var_ArcGISPro_Patch.txt"
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Current ARCGISPRO Patch: %ARCGISPRO_PATCH% >> %LOG_LOCATION%\%LOG_FILE%
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:: Check Registry Values for ArcGIS Pro
+REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Licensing /v AUTHORIZATION_TYPE | FIND "%$AUTHORIZATION_TYPE%"
+IF %ERRORLEVEL% EQU 1 REG ADD HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Licensing /v AUTHORIZATION_TYPE /t REG_SZ /d %$AUTHORIZATION_TYPE% /f
+REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Licensing /v LICENSE_SERVER | FIND "%$ESRI_LICENSE_HOST%"
+IF %ERRORLEVEL% EQU 1 REG ADD HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Licensing /v LICENSE_SERVER /t REG_SZ /d %$ESRI_LICENSE_HOST% /f
 
 :: Section for variables to be set/reset so that DEBUG is correct
 IF %DEBUG_MODE% EQU 1 SET CLEANUP=0
@@ -447,10 +468,13 @@ IF NOT EXIST "%PACKAGE_DESTINATION%"  IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE%
 :EOF
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	END! >> %LOG_LOCATION%\%LOG_FILE%
 ECHO. >> %LOG_LOCATION%\%LOG_FILE%
+:: Domain User required
+IF %LOCAL_USER% EQU 1 GoTo skipLS
 :: Ship the log file
 IF DEFINED LOG_SHIPPING_LOCATION ECHO Shipping log file ...
 echo.
 IF NOT EXIST "%LOG_SHIPPING_LOCATION%" MD "%LOG_SHIPPING_LOCATION%"
 IF EXIST %LOG_LOCATION%\%LOG_FILE% ROBOCOPY "%LOG_LOCATION%" "%LOG_SHIPPING_LOCATION%" %LOG_FILE% /R:5 /W:30 /NDL /NFL /NP
+:skipLS
 ENDLOCAL
 EXIT /B
