@@ -34,8 +34,8 @@ setlocal enableextensions
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 SET SCRIPT_NAME=ArcGIS_Pro_Manager
-SET SCRIPT_VERSION=1.5.0
-SET SCRIPT_BUILD=20200420-1035
+SET SCRIPT_VERSION=1.5.1
+SET SCRIPT_BUILD=20200630-1446
 Title %SCRIPT_NAME% %SCRIPT_VERSION%
 Prompt AGPM$G
 color 0B
@@ -139,7 +139,7 @@ SET $SOFTWARE_CLASS=Professional
 ::	CONCURRENT_USE to install as a Concurrent Use seat;
 ::	and NAMED_USER for a Named User license.
 ::	{SINGLE_USE, Concurrent_USE, NAMED_USER}
-SET $AUTHORIZATION_TYPE=CONCURRENT_USE
+SET $AUTHORIZATION_TYPE=NAMED_USER
 
 ::	During a silent, per-machine installation of ArcGIS Pro, if the
 ::	authorization type is defined, this is set to True under
@@ -289,12 +289,14 @@ IF %ADMIN_STATUS% EQU 1 IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL
 
 :: If network Repo, check user is domain user
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: User status checking... >> %LOG_LOCATION%\%LOG_FILE%
-IF DEFINED PACKAGE_SOURCE (echo %PACKAGE_SOURCE% | FIND "\\") & (SET DOMAIN_USER_REQ=%ERRORLEVEL%)
+IF DEFINED PACKAGE_SOURCE (echo %PACKAGE_SOURCE% | FIND "\\") 
+IF %ERRORLEVEL% EQU 0 (SET DOMAIN_USER_REQ=1) ELSE (SET DOMAIN_USER_REQ=0)
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: DOMAIN_USER_REQ: %DOMAIN_USER_REQ% >> %LOG_LOCATION%\%LOG_FILE%
-:: Should be a domain user is PACAKGE_SOURCE configured as SMB
-IF %DOMAIN_USER_REQ% EQU 0 IF %USERDOMAIN%==%COMPUTERNAME% SET LOCAL_USER=1
+:: Should be a domain user if PACAKGE_SOURCE configured as SMB
+SET LOCAL_USER=0
+IF %DOMAIN_USER_REQ% EQU 1 IF "%USERDOMAIN%"=="%COMPUTERNAME%" SET LOCAL_USER=1
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOCAL_USER: %LOCAL_USER% >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	User is not a domain user, but Remote Repo configured! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOCAL_USER% EQU 1 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	User is not a domain user, but Remote Repo configured! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOCAL_USER% EQU 1 GoTo postCheck
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: User status checking. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
