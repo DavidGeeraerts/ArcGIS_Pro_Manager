@@ -34,8 +34,8 @@ setlocal enableextensions
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 SET SCRIPT_NAME=ArcGIS_Pro_Manager
-SET SCRIPT_VERSION=1.5.1
-SET SCRIPT_BUILD=20200630-1446
+SET SCRIPT_VERSION=1.5.2
+SET SCRIPT_BUILD=20200707-0852
 Title %SCRIPT_NAME% %SCRIPT_VERSION%
 Prompt AGPM$G
 color 0B
@@ -87,6 +87,10 @@ SET LOG_LEVEL_TRACE=0
 :: 0 = OFF (NO)
 :: 1 = ON (YES)
 SET DEBUG_MODE=0
+
+:: Configure a Debugger to auto set all logging
+SET $DEBUGGER_PC=SC-Cavia
+
 
 ::###########################################################################::
 ::		*******************
@@ -215,6 +219,10 @@ IF NOT EXIST %LOG_LOCATION% MD %LOG_LOCATION%
 IF EXIST %LOG_LOCATION%\test_%LOG_FILE% DEL /Q %LOG_LOCATION%\test_%LOG_FILE%
 IF NOT EXIST "%LOG_LOCATION%\var" MD "%LOG_LOCATION%\var" || IF NOT EXIST "%TEMP%\Logs" MD "%TEMP%\Logs\var"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:: Certain test computers should always have ALL logging turned on
+HOSTNAME | (FIND /I "%$DEBUGGER_PC%" 2> nul) && (SET DEBUG_MODE=1) && (SET CLEANUP=0)
+
 
 :flogl
 :: FUNCTION: Check and configure for ALL LOG LEVEL
@@ -392,7 +400,8 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Current ARCGISPRO Versio
 :: Get the updated version of ArcGIS Pro
 FOR /F "tokens=6 delims=\" %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Updates') DO ECHO %%P > %LOG_LOCATION%\var\var_ArcGISPro_Patch.txt
 SET /P ARCGISPRO_PATCH= < "%LOG_LOCATION%\var\var_ArcGISPro_Patch.txt"
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Current ARCGISPRO Patch: %ARCGISPRO_PATCH% >> %LOG_LOCATION%\%LOG_FILE%
+IF DEFINED ARCGISPRO_PATCH IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Current ARCGISPRO Patch: %ARCGISPRO_PATCH% >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT DEFINED ARCGISPRO_PATCH IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Current ARCGISPRO Patch: NA >> %LOG_LOCATION%\%LOG_FILE%
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :: Check Registry Values for ArcGIS Pro
@@ -443,6 +452,7 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOG_FILE: %LOG_FILE% >> %LOG_LOCATION%\
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOG_SHIPPING_LOCATION: %LOG_SHIPPING_LOCATION% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: CLEANUP: %CLEANUP% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: DEBUG_MODE: %DEBUG_MODE% >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $DEBUGGER_PC:	%$DEBUGGER_PC% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	------------------------------------------------------------------- >> %LOG_LOCATION%\%LOG_FILE%
 :varE
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Variable debug!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -467,7 +477,7 @@ IF NOT EXIST "%PACKAGE_DESTINATION%"  IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE%
 :skipClean
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:EOF
+:End
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	END! >> %LOG_LOCATION%\%LOG_FILE%
 ECHO. >> %LOG_LOCATION%\%LOG_FILE%
 :: Domain User required
