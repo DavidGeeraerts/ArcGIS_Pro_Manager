@@ -34,8 +34,8 @@ setlocal enableextensions
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 SET SCRIPT_NAME=ArcGIS_Pro_Manager
-SET SCRIPT_VERSION=1.6.0
-SET SCRIPT_BUILD=20200819-0940
+SET SCRIPT_VERSION=1.6.1
+SET SCRIPT_BUILD=20210322-0845
 Title %SCRIPT_NAME% %SCRIPT_VERSION%
 Prompt AGPM$G
 color 0B
@@ -176,7 +176,7 @@ SET "$Portal_List=https://geoduck.maps.arcgis.com"
 ::	set License_URL = <portalURL>.
 ::	If ArcGIS_Connection is set to False, License_URL cannot contain arcgis.com.
 ::	To use this property, AUTHORIZATION_TYPE must be set to NAMED_USER.
-SET "$License_URL=https://geoduck.maps.arcgis.com"
+::	SET "$License_URL=https://geoduck.maps.arcgis.com"
 
 ::###########################################################################::
 
@@ -375,14 +375,22 @@ IF EXIST "%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\ArcGIS" del /S /Q 
 :: Check License_URL & Authorization_Type
 IF DEFINED $License_URL IF /I "%$AUTHORIZATION_TYPE%"=="NAMED_USER" GoTo skipC1
 :: not named_user, can't be defined
+:: Cleanup reg key before installer
+REM If License_URL is defined from previous install, installation will fail if AUTHORIZATION_TYPE=Concurrent
+REG ADD HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Settings /V License_URL /f /d ""
 SET $License_URL=
 :skipC1
-
 
 :: Execute the installer
 ECHO Installing ArcGIS Pro latest version...
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Installing ArcGIS Pro latest version... >> %LOG_LOCATION%\%LOG_FILE%
-IF DEFINED ARCGISPRO_FOLDER msiexec /i "%PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%\ArcGISPro.msi" INSTALLDIR="%$INSTALLDIR%" ALLUSERS=%$ALLUSERS% ENABLEEUEI=%$ENABLEEUEI% BLOCKADDINS=%$BLOCKADDINS% CHECKFORUPDATESATSTARTUP=%$CHECKFORUPDATESATSTARTUP% ESRI_LICENSE_HOST=^%$ESRI_LICENSE_HOST% SOFTWARE_CLASS=%$SOFTWARE_CLASS% AUTHORIZATION_TYPE=%$AUTHORIZATION_TYPE% LOCK_AUTH_SETTINGS=%$LOCK_AUTH_SETTINGS% ArcGIS_Connection=%$ArcGIS_Connection% Portal_List="%$Portal_List%" License_URL="%$License_URL%" /qb
+
+IF NOT DEFINED ARCGISPRO_FOLDER GoTo skipAGSPI
+
+msiexec /i "%PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%\ArcGISPro.msi" INSTALLDIR="%$INSTALLDIR%" ALLUSERS=%$ALLUSERS% ENABLEEUEI=%$ENABLEEUEI% BLOCKADDINS=%$BLOCKADDINS% CHECKFORUPDATESATSTARTUP=%$CHECKFORUPDATESATSTARTUP% ESRI_LICENSE_HOST=^%$ESRI_LICENSE_HOST% SOFTWARE_CLASS=%$SOFTWARE_CLASS% AUTHORIZATION_TYPE=%$AUTHORIZATION_TYPE% LOCK_AUTH_SETTINGS=%$LOCK_AUTH_SETTINGS% ArcGIS_Connection=%$ArcGIS_Connection% Portal_List="%$Portal_List%" License_URL="%$License_URL%" /qb
+
+:skipAGSPI
+
 SET ARCGISPRO_INSTALL_ERROR=%ERRORLEVEL%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	ARCGISPRO_INSTALL_ERROR: %ARCGISPRO_INSTALL_ERROR% >> %LOG_LOCATION%\%LOG_FILE%
 :skipAP
@@ -393,7 +401,7 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Checking if patch instal
 ECHO Checking on update packages...
 :trapAPP
 SET PACKAGE_ALREADY_INSTALLED=0
-REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Updates /S /v "NAME" || SET PACKAGE_ALREADY_INSTALLED=0
+REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Updates /S /v "NAME" 2> nul || SET PACKAGE_ALREADY_INSTALLED=0
 dir /B /A:-D "%PACKAGE_SOURCE%\%ARCGISPRO_FOLDER%" | FIND /I ".msp"> %LOG_LOCATION%\var\var_ArcGISPro_updatePackage.txt
 SET /P ARCGISPRO_UPDATE_PACKAGE= < "%LOG_LOCATION%\var\var_ArcGISPro_updatePackage.txt"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ARCGISPRO_UPDATE_PACKAGE: %ARCGISPRO_UPDATE_PACKAGE% >> %LOG_LOCATION%\%LOG_FILE%
