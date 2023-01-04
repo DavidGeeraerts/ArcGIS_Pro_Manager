@@ -34,8 +34,8 @@ setlocal enableextensions
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 SET SCRIPT_NAME=ArcGIS_Pro_Manager
-SET SCRIPT_VERSION=1.8.0
-SET SCRIPT_BUILD=20221006 0845
+SET SCRIPT_VERSION=1.8.1
+SET SCRIPT_BUILD=20230104 0745
 Title %SCRIPT_NAME% %SCRIPT_VERSION%
 Prompt AGPM$G
 color 0B
@@ -57,6 +57,10 @@ mode con:lines=45
 SET "PACKAGE_SOURCE=\\Orca\research\Software\ESRI\ArcGIS_Pro"
 SET "PACKAGE_DESTINATION=%PUBLIC%\Downloads"
 
+::	Microsoft .net sdk dependency package repository
+SET "$NET_SDK_PACKAGE=\\Orca\research\Software\Microsoft\NET
+
+
 :: Log settings
 ::	Advise local storage for logging.
 SET "LOG_LOCATION=%PUBLIC%\Logs"
@@ -74,7 +78,7 @@ SET CLEANUP=1
 
 :: LOGGING LEVEL CONTROL
 ::  by default, ALL=0 & TRACE=0
-SET LOG_LEVEL_ALL=0
+SET LOG_LEVEL_ALL=1
 SET LOG_LEVEL_INFO=1
 SET LOG_LEVEL_WARN=1
 SET LOG_LEVEL_ERROR=1
@@ -379,8 +383,8 @@ if %$INSTALL_DOTNET% EQU 1 GoTo skipNETV
 dotnet --version> %LOG_LOCATION%\var\dotnet-version.txt
 SET /P $DOTNET_VERSION= < %LOG_LOCATION%\var\dotnet-version.txt
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $DOTNET_VERSION: %$DOTNET_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
-dir /B /A:-D /O:-D "\\SC-Vanadium\Deploy\Microsoft\NET"> "%LOG_LOCATION%\var\NET-SDK_Package.txt"
-for /f "tokens=3 delims=-" %%P IN ("%LOG_LOCATION%\var\NET-SDK_Package.txt") Do echo %%P> "%LOG_LOCATION%\var\NET-SDK_Package_Version.txt"
+dir /B /A:-D /O:-D "%$NET_SDK_PACKAGE%"> "%LOG_LOCATION%\var\NET-SDK_Package.txt"
+for /f "tokens=3 delims=-" %%P IN (%LOG_LOCATION%\var\NET-SDK_Package.txt) Do echo %%P> "%LOG_LOCATION%\var\NET-SDK_Package_Version.txt"
 SET /P $NET_SDK_PACKAGE_VERSION= < "%LOG_LOCATION%\var\NET-SDK_Package_Version.txt"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $NET_SDK_PACKAGE_VERSION: %$NET_SDK_PACKAGE_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
 if %$NET_SDK_PACKAGE_VERSION% GTR %$DOTNET_VERSION% SET $INSTALL_DOTNET=1
