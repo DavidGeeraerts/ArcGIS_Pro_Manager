@@ -34,8 +34,8 @@ setlocal enableextensions
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 SET $SCRIPT_NAME=ArcGIS_Pro_Manager
-SET $SCRIPT_VERSION=1.8.2
-SET $SCRIPT_BUILD=20230104 0815
+SET $SCRIPT_VERSION=1.8.3
+SET $SCRIPT_BUILD=20230420 0900
 Title %$SCRIPT_NAME% %$SCRIPT_VERSION%
 Prompt AGPM$G
 color 0B
@@ -393,7 +393,7 @@ if %$INSTALL_DOTNET% EQU 0 GoTo skipNET
 
 IF %$LOG_LEVEL_TRACE% EQU 1 ECHO %$ISO_DATE% %TIME% [TRACE]	ENTER: Microsoft .NET SDK download... >> %$LOG_LOCATION%\%$LLOG_FILE%
 IF %$LOG_LEVEL_INFO% EQU 1 ECHO %$ISO_DATE% %TIME% [INFO]	installing Microsoft .NET SDK >> %$LOG_LOCATION%\%$LLOG_FILE%
-ROBOCOPY "\\SC-Vanadium\Deploy\Microsoft\NET" "%PUBLIC%\Downloads\NET-SDK" *.exe /NP /R:2 /W:5
+ROBOCOPY "%$NET_SDK_PACKAGE%" "%PUBLIC%\Downloads\NET-SDK" *.exe /NP /R:2 /W:5
 CD "%PUBLIC%\Downloads\NET-SDK"
 dir /B /A:-D /O:-D> "%$LOG_LOCATION%\var\NET-SDK.txt"
 SET /P $NET_SDK= < "%$LOG_LOCATION%\var\NET-SDK.txt"
@@ -409,10 +409,12 @@ IF %$LOG_LEVEL_TRACE% EQU 1 ECHO %$ISO_DATE% %TIME% [TRACE]	EXIT: Microsoft .NET
 
 :: Copy the installers locally
 ECHO Downloading ArcGIS Pro packages (be patient)...
+IF %$LOG_LEVEL_INFO% EQU 1 ECHO %$ISO_DATE% %TIME% [INFO]	Installing ArcGIS Pro latest version... >> %$LOG_LOCATION%\%$LLOG_FILE%
 ROBOCOPY "%$PACKAGE_SOURCE%\%ARCGISPRO_FOLDER%" "%$PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%" /S /E /NP /NDL /NFL /R:2 /W:5 /LOG+:"%$LOG_LOCATION%\%$LLOG_FILE%"
 :: Installation Prep
 ::	Fix orphaned ArcGIS file in Start Menu
-IF EXIST "%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\ArcGIS" del /S /Q /F "%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\ArcGIS"
+::	Only needed when the main installer leaves bad links.
+::	IF EXIST "%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\ArcGIS\ArcGIS Pro" del /S /Q /F "%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\ArcGIS\ArcGIS Pro"
 :: Check License_URL & Authorization_Type
 IF DEFINED $License_URL IF /I "%$AUTHORIZATION_TYPE%"=="NAMED_USER" GoTo skipC1
 :: not named_user, can't be defined
@@ -422,13 +424,9 @@ REG ADD HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Settings /V License_URL /f /d
 SET $License_URL=
 :skipC1
 
-
 :: Execute the installer
-ECHO Installing ArcGIS Pro latest version...
-IF %$LOG_LEVEL_INFO% EQU 1 ECHO %$ISO_DATE% %TIME% [INFO]	Installing ArcGIS Pro latest version... >> %$LOG_LOCATION%\%$LLOG_FILE%
-
 IF NOT DEFINED ARCGISPRO_FOLDER GoTo skipAGSPI
-
+ECHO Installing ArcGIS Pro latest version...
 msiexec /i "%$PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%\ArcGISPro.msi" INSTALLDIR="%$INSTALLDIR%" ALLUSERS=%$ALLUSERS% ENABLEEUEI=%$ENABLEEUEI% ACCEPTEULA=%$ACCEPTEULA% BLOCKADDINS=%$BLOCKADDINS% CHECKFORUPDATESATSTARTUP=%$CHECKFORUPDATESATSTARTUP% ESRI_LICENSE_HOST=^%$ESRI_LICENSE_HOST% SOFTWARE_CLASS=%$SOFTWARE_CLASS% AUTHORIZATION_TYPE=%$AUTHORIZATION_TYPE% LOCK_AUTH_SETTINGS=%$LOCK_AUTH_SETTINGS% ArcGIS_Connection=%$ArcGIS_Connection% Portal_List="%$Portal_List%" License_URL="%$License_URL%" /qb
 
 :skipAGSPI
