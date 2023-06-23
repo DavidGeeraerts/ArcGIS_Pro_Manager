@@ -34,8 +34,8 @@ setlocal enableextensions
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 SET $SCRIPT_NAME=ArcGIS_Pro_Manager
-SET $SCRIPT_VERSION=1.8.3
-SET $SCRIPT_BUILD=20230420 0900
+SET $SCRIPT_VERSION=1.8.4
+SET $SCRIPT_BUILD=20230623 0830
 Title %$SCRIPT_NAME% %$SCRIPT_VERSION%
 Prompt AGPM$G
 color 0B
@@ -342,8 +342,10 @@ IF %$LOG_LEVEL_TRACE% EQU 1 ECHO %$ISO_DATE% %TIME% [TRACE]	EXIT: User status ch
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :: Get the currently installed version of ArcGIS Pro
-(FOR /F "tokens=3 delims= " %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro /V REALVERSION') DO ECHO %%P > %$LOG_LOCATION%\var\var_ArcGISPro_version.txt) 2> nul
+(FOR /F "tokens=3 delims= " %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro /V REALVERSION') DO ECHO %%P> %$LOG_LOCATION%\var\var_ArcGISPro_version.txt) 2> nul
 IF EXIST "%$LOG_LOCATION%\var\var_ArcGISPro_Version.txt" SET /P ARCGISPRO_VERSION= < "%$LOG_LOCATION%\var\var_ArcGISPro_Version.txt"
+REM Will return Major and Minor, but not revision. Append 0 as revision
+SET ARCGISPRO_VERSION=%ARCGISPRO_VERSION%.0
 IF DEFINED ARCGISPRO_VERSION IF %$LOG_LEVEL_INFO% EQU 1 ECHO %$ISO_DATE% %TIME% [INFO]	Found ARCGISPRO Version: %ARCGISPRO_VERSION% >> %$LOG_LOCATION%\%$LLOG_FILE%
 IF NOT DEFINED ARCGISPRO_VERSION IF %$LOG_LEVEL_INFO% EQU 1 ECHO %$ISO_DATE% %TIME% [INFO]	ArcGIS Pro not installed! First time installation! >> %$LOG_LOCATION%\%$LLOG_FILE%
 IF NOT DEFINED ARCGISPRO_VERSION SET ARCGISPRO_VERSION=0
@@ -446,7 +448,16 @@ dir /B /A:-D "%$PACKAGE_SOURCE%\%ARCGISPRO_FOLDER%" | FIND /I ".msp"> %$LOG_LOCA
 SET /P ARCGISPRO_UPDATE_PACKAGE= < "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage.txt"
 IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	VARIABLE: ARCGISPRO_UPDATE_PACKAGE: %ARCGISPRO_UPDATE_PACKAGE% >> %$LOG_LOCATION%\%$LLOG_FILE%
 IF NOT DEFINED ARCGISPRO_UPDATE_PACKAGE GoTo skipAPP
-FOR /F "tokens=3-5 delims=^(^)." %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Updates /S /v "NAME" ^| FIND /I "Name"') DO (dir /b /A:-D "%PACKAGE_SOURCE%\%ARCGISPRO_FOLDER%" | FIND /I "%%P%%Q%%R") && SET PACKAGE_ALREADY_INSTALLED=1
+REM MSP Package should follow the format of ArcGIS_Pro_<UpdateVersion>_<build>.msp
+REM Just want the Update version seperated by "_"
+FOR /F "tokens=3 delims=_" %%P IN (%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage.txt) DO echo %%P> %$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_Version.txt
+SET /P ARCGISPRO_UPDATE_PACKAGE_VERSION= < "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_Version.txt"
+IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	VARIABLE: ARCGISPRO_UPDATE_PACKAGE_VERSION: %ARCGISPRO_UPDATE_PACKAGE_VERSION% >> %$LOG_LOCATION%\%$LLOG_FILE%
+
+IF EXIST "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system.txt" DEL /Q /F "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system.txt"
+FOR /F "tokens=3-5 delims=^(^)." %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Updates /S /v "NAME"') DO echo %%P%%Q%%R>> "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system.txt"
+SET /P ARCGIS_UPDATE_VERSION_SYSTEM= < "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system.txt"
+IF %ARCGIS_UPDATE_VERSION_SYSTEM% GEQ %ARCGISPRO_UPDATE_PACKAGE_VERSION% SET PACKAGE_ALREADY_INSTALLED=1
 IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	VARIABLE: PACKAGE_ALREADY_INSTALLED: %PACKAGE_ALREADY_INSTALLED% >> %$LOG_LOCATION%\%$LLOG_FILE%
 IF %PACKAGE_ALREADY_INSTALLED% EQU 1 IF %$LOG_LEVEL_INFO% EQU 1 ECHO %$ISO_DATE% %TIME% [INFO]	ArcGIS Pro update package {%ARCGISPRO_UPDATE_PACKAGE%} already installed! >> %$LOG_LOCATION%\%$LLOG_FILE%
 IF %PACKAGE_ALREADY_INSTALLED% EQU 1 GoTo skipAPP
