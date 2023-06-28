@@ -34,8 +34,8 @@ setlocal enableextensions
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 SET $SCRIPT_NAME=ArcGIS_Pro_Manager
-SET $SCRIPT_VERSION=1.8.4
-SET $SCRIPT_BUILD=20230623 0830
+SET $SCRIPT_VERSION=1.9.0
+SET $SCRIPT_BUILD=20230628 0830
 Title %$SCRIPT_NAME% %$SCRIPT_VERSION%
 Prompt AGPM$G
 color 0B
@@ -412,7 +412,7 @@ IF %$LOG_LEVEL_TRACE% EQU 1 ECHO %$ISO_DATE% %TIME% [TRACE]	EXIT: Microsoft .NET
 :: Copy the installers locally
 ECHO Downloading ArcGIS Pro packages (be patient)...
 IF %$LOG_LEVEL_INFO% EQU 1 ECHO %$ISO_DATE% %TIME% [INFO]	Installing ArcGIS Pro latest version... >> %$LOG_LOCATION%\%$LLOG_FILE%
-ROBOCOPY "%$PACKAGE_SOURCE%\%ARCGISPRO_FOLDER%" "%$PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%" /S /E /NP /NDL /NFL /R:2 /W:5 /LOG+:"%$LOG_LOCATION%\%$LLOG_FILE%"
+ROBOCOPY "%$PACKAGE_SOURCE%\%ARCGISPRO_FOLDER%" "%$PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%" /MIR /S /E /NP /NDL /NFL /R:2 /W:5 /LOG+:"%$LOG_LOCATION%\%$LLOG_FILE%"
 :: Installation Prep
 ::	Fix orphaned ArcGIS file in Start Menu
 ::	Only needed when the main installer leaves bad links.
@@ -454,9 +454,21 @@ FOR /F "tokens=3 delims=_" %%P IN (%$LOG_LOCATION%\var\var_ArcGISPro_updatePacka
 SET /P ARCGISPRO_UPDATE_PACKAGE_VERSION= < "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_Version.txt"
 IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	VARIABLE: ARCGISPRO_UPDATE_PACKAGE_VERSION: %ARCGISPRO_UPDATE_PACKAGE_VERSION% >> %$LOG_LOCATION%\%$LLOG_FILE%
 
+IF EXIST "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system_int.txt" DEL /Q /F "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system_int.txt"
 IF EXIST "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system.txt" DEL /Q /F "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system.txt"
-FOR /F "tokens=3-5 delims=^(^)." %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Updates /S /v "NAME"') DO echo %%P%%Q%%R>> "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system.txt"
-SET /P ARCGIS_UPDATE_VERSION_SYSTEM= < "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system.txt"
+FOR /F "tokens=3-5 delims=^(^)." %%P IN ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Updates /S /v "NAME"') DO echo %%P%%Q%%R>> "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system_int.txt"
+findstr /R /C:"[0-9][0-9][0-9]" "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system_int.txt" >> "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system.txt"
+for /f "tokens=3 delims=:" %%P IN ('find /C /V " " "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system.txt"') DO SET COUNTER=%%P
+IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	VARIABLE:COUNTER {%COUNTER%} >> %$LOG_LOCATION%\%$LLOG_FILE%
+REM remove leading space
+for /f "tokens=1 delims= " %%P IN ("%COUNTER%") DO SET COUNTER=%%P
+IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	VARIABLE:COUNTER {%COUNTER%} >> %$LOG_LOCATION%\%$LLOG_FILE%
+SET /A COUNTER-=%COUNTER%-1"
+IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	VARIABLE:COUNTER {%COUNTER%} >> %$LOG_LOCATION%\%$LLOG_FILE%
+for /f "skip=%COUNTER% delims=" %%P IN ('findstr /R /C:"[0-9][0-9][0-9]" "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system.txt"') Do echo %%P> "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system_u.txt"
+SET /P ARCGIS_UPDATE_VERSION_SYSTEM= < "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system_u.txt"
+IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	VARIABLE:ARCGIS_UPDATE_VERSION_SYSTEM {%ARCGIS_UPDATE_VERSION_SYSTEM%} >> %$LOG_LOCATION%\%$LLOG_FILE%
+IF NOT DEFINED ARCGIS_UPDATE_VERSION_SYSTEM SET /P ARCGIS_UPDATE_VERSION_SYSTEM= < "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage_system.txt"
 IF %ARCGIS_UPDATE_VERSION_SYSTEM% GEQ %ARCGISPRO_UPDATE_PACKAGE_VERSION% SET PACKAGE_ALREADY_INSTALLED=1
 IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	VARIABLE: PACKAGE_ALREADY_INSTALLED: %PACKAGE_ALREADY_INSTALLED% >> %$LOG_LOCATION%\%$LLOG_FILE%
 IF %PACKAGE_ALREADY_INSTALLED% EQU 1 IF %$LOG_LEVEL_INFO% EQU 1 ECHO %$ISO_DATE% %TIME% [INFO]	ArcGIS Pro update package {%ARCGISPRO_UPDATE_PACKAGE%} already installed! >> %$LOG_LOCATION%\%$LLOG_FILE%
