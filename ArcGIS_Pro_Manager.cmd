@@ -34,8 +34,8 @@ setlocal enableextensions
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 SET $SCRIPT_NAME=ArcGIS_Pro_Manager
-SET $SCRIPT_VERSION=1.12.0
-SET $SCRIPT_BUILD=20241212 0930
+SET $SCRIPT_VERSION=1.12.1
+SET $SCRIPT_BUILD=20241216 1045
 Title %$SCRIPT_NAME% %$SCRIPT_VERSION%
 Prompt AGPM$G
 color 0B
@@ -460,23 +460,22 @@ ROBOCOPY "%$PACKAGE_SOURCE%\%ARCGISPRO_FOLDER%" "%$PACKAGE_DESTINATION%\%ARCGISP
 ::	Only needed when the main installer leaves bad links.
 ::	IF EXIST "%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\ArcGIS\ArcGIS Pro" del /S /Q /F "%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\ArcGIS\ArcGIS Pro"
 :: Check License_URL & Authorization_Type
-IF DEFINED $License_URL IF /I "%$AUTHORIZATION_TYPE%"=="NAMED_USER" GoTo skipC1
+IF DEFINED $License_URL IF NOT /I "%$AUTHORIZATION_TYPE%"=="NAMED_USER" GoTo skipC1
 :: not named_user, can't be defined
 :: $CLEANUP reg key before installer
 REM If License_URL is defined from previous install, installation will fail if AUTHORIZATION_TYPE=Concurrent
-REG ADD HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Settings /V License_URL /f /d ""
-SET $License_URL=
+REG ADD HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Settings /V License_URL /f /d "%$License_URL%"
 :skipC1
 
 :: Execute the installer
 IF NOT DEFINED ARCGISPRO_FOLDER GoTo skipAGSPI
 ECHO Installing ArcGIS Pro latest version...
 msiexec /i "%$PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%\ArcGISPro.msi" INSTALLDIR="%$INSTALLDIR%" ALLUSERS=%$ALLUSERS% ENABLEEUEI=%$ENABLEEUEI% ACCEPTEULA=%$ACCEPTEULA% BLOCKADDINS=%$BLOCKADDINS% CHECKFORUPDATESATSTARTUP=%$CHECKFORUPDATESATSTARTUP% ESRI_LICENSE_HOST=^%$ESRI_LICENSE_HOST% SOFTWARE_CLASS=%$SOFTWARE_CLASS% AUTHORIZATION_TYPE=%$AUTHORIZATION_TYPE% LOCK_AUTH_SETTINGS=%$LOCK_AUTH_SETTINGS% ArcGIS_Connection=%$ArcGIS_Connection% Portal_List="%$Portal_List%" License_URL="%$License_URL%" /qb
-
 :skipAGSPI
-
 SET ARCGISPRO_INSTALL_ERROR=%ERRORLEVEL%
 IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	ARCGISPRO_INSTALL_ERROR: %ARCGISPRO_INSTALL_ERROR% >> %$LOG_LOCATION%\%$LLOG_FILE%
+REM With 3.4.0 License_URL isn't getting properly set. Applying extra measure
+IF DEFINED $License_URL REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Settings" /V License_URL /f /d "%$License_URL%"
 :skipAP
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
