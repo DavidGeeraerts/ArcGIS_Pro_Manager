@@ -34,8 +34,8 @@ setlocal enableextensions
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 SET $SCRIPT_NAME=ArcGIS_Pro_Manager
-SET $SCRIPT_VERSION=1.10.1
-SET $SCRIPT_BUILD=20240124 0800
+SET $SCRIPT_VERSION=1.12.0
+SET $SCRIPT_BUILD=20241212 0930
 Title %$SCRIPT_NAME% %$SCRIPT_VERSION%
 Prompt AGPM$G
 color 0B
@@ -102,6 +102,9 @@ SET $DEBUGGER_PC=SC-Cavia
 ::		*******************
 ::###########################################################################::
 
+:: Latest Documentation
+:: URL=https://pro.arcgis.com/en/pro-app/latest/get-started/arcgis-pro-installation-administration.htm#GUID-E10E5255-1EF8-46BB-BB1A-9BF90A394EF6
+
 :: ArcGIS Silent Install Parameters
 ::	{DEFAULT: %System Drive%\Program Files\ArcGIS\Pro for a per-machine installation}
 ::	{DEFAULT: %System Drive%\%USERPROFILE%\AppData\Local\Programs\ArcGIS\Pro for a current user instance}
@@ -120,6 +123,13 @@ SET $ENABLEEUEI=0
 ::	This property is required to accept the End User License Agreement during a silent installation.
 SET $ACCEPTEULA=yes
 
+:: ADDLOCAL
+:: This parameter is used to install the optional features included in the ArcGIS Pro setup.
+::	{CreateLocator, SemanticSearch, ToolSuggestions}
+:: To add ALL use  ADDLOCAL=ALL
+:: SET $ADDLOCAL=
+
+:: BLOCKADDINS
 ::	If specified, the BlockAddins registry value allows system administrators
 ::	to configure the types of add-ins that ArcGIS Pro will load. It is created
 ::	under HKEY_LOCAL_MACHINE\SOFTWARE\Esri\ArcGISPro\Settings.
@@ -135,24 +145,34 @@ SET $ACCEPTEULA=yes
 ::	{0,1,2,3,4,5}
 SET $BLOCKADDINS=0
 
+::	CHECKFORUPDATESATSTARTUP
 ::	DEFAULT 1
 ::	{0,1}
 SET $CHECKFORUPDATESATSTARTUP=0
 
+:: ADMIN_SETTINGS_PATH
+:: ArcGIS Pro allows administrators to set default values for a select number of application settings in a .settingsConfig file
+:: $ADMIN_SETTINGS_PATH=
+
+:: ESRI_LICENSE_HOST
+REM This is essentially deprecated since ESRI is no longer providing concurrent licensing for Educational institutions.
 ::	Specifies the host name of the license manager. Multiple license servers
 ::	can be defined by separating the host names with a semicolon; for example,
 ::	ESRI_LICENSE_HOST=@primaryLM;@backupLM2;@backupLM3
-SET $ESRI_LICENSE_HOST=@sc-tellus.evergreen.edu
+SET $ESRI_LICENSE_HOST=
 
+:: SOFTWARE_CLASS
 ::	Can be Viewer, Editor, or Professional.
 SET $SOFTWARE_CLASS=Professional
 
+:: AUTHORIZATION_TYPE
 ::	Use SINGLE_USE to install ArcGIS Pro as a Single Use seat;
 ::	CONCURRENT_USE to install as a Concurrent Use seat;
 ::	and NAMED_USER for a Named User license.
 ::	{SINGLE_USE, Concurrent_USE, NAMED_USER}
-SET $AUTHORIZATION_TYPE=CONCURRENT_USE
+SET $AUTHORIZATION_TYPE=NAMED_USER
 
+:: LOCK_AUTH_SETTINGS
 ::	During a silent, per-machine installation of ArcGIS Pro, if the
 ::	authorization type is defined, this is set to True under
 ::	HKEY_LOCAL_MACHINE\SOFTWARE\Esri\ArcGISPro\Licensing.
@@ -165,12 +185,14 @@ SET $AUTHORIZATION_TYPE=CONCURRENT_USE
 ::	{True, False}
 SET $LOCK_AUTH_SETTINGS=False
 
+:: ARCGIS_CONNECTION
 ::	Specifies whether a connection to www.arcgis.com should be available from
 ::	the Portals page. To include the connection, set this property to TRUE.
 ::	If set to FALSE, the connection will not appear on the Portals page.
 ::	{True, False}
 SET $ArcGIS_Connection=True
 
+:: PORTAL_LIST
 ::	 To add one or more portal connections to the Portals page,
 ::	set Portal_List = <portalURL1>; <portalURL2>.
 ::	Use semicolons to separate portal URLs.
@@ -184,7 +206,7 @@ SET "$Portal_List=https://geoduck.maps.arcgis.com"
 ::	set License_URL = <portalURL>.
 ::	If ArcGIS_Connection is set to False, License_URL cannot contain arcgis.com.
 ::	To use this property, AUTHORIZATION_TYPE must be set to NAMED_USER.
-::	SET "$License_URL=https://geoduck.maps.arcgis.com"
+SET "$License_URL=https://geoduck.maps.arcgis.com"
 
 ::###########################################################################::
 
@@ -314,10 +336,16 @@ IF %$LSU_ERROR% NEQ 0 GoTo skipLSU
 REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro | FIND "Licensing"> %$LOG_LOCATION%\var\var_ArcGIS_License_HKEY.txt
 SET /P $ARCGIS_LICENSE_HKEY= < "%$LOG_LOCATION%\var\var_ArcGIS_License_HKEY.txt"
 IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	VARIABLE: $ARCGIS_LICENSE_HKEY: %$ARCGIS_LICENSE_HKEY% >> %$LOG_LOCATION%\%$LLOG_FILE%
-REG ADD "%$ARCGIS_LICENSE_HKEY%" /V LICENSE_SERVER /f /d %$ESRI_LICENSE_HOST%
-REG QUERY "%$ARCGIS_LICENSE_HKEY%" /V LICENSE_SERVER 2> nul > %$LOG_LOCATION%\var\var_ArcGIS_License_HKEY_Value.txt
-SET /P $ARCGIS_LICENSE_HKEY_VALUE= < "%$LOG_LOCATION%\var\var_ArcGIS_License_HKEY_Value.txt"
-IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	VARIABLE: $ARCGIS_LICENSE_HKEY_VALUE: %$ARCGIS_LICENSE_HKEY_VALUE% >> %$LOG_LOCATION%\%$LLOG_FILE%
+IF DEFINED $ESRI_LICENSE_HOST (
+	REG ADD "%$ARCGIS_LICENSE_HKEY%" /V LICENSE_SERVER /f /d %$ESRI_LICENSE_HOST%
+	REG QUERY "%$ARCGIS_LICENSE_HKEY%" /V LICENSE_SERVER 2> nul > %$LOG_LOCATION%\var\var_ArcGIS_License_HKEY_Value.txt
+	SET /P $ARCGIS_LICENSE_HKEY_VALUE= < "%$LOG_LOCATION%\var\var_ArcGIS_License_HKEY_Value.txt"
+	IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	VARIABLE: $ARCGIS_LICENSE_HKEY_VALUE: %$ARCGIS_LICENSE_HKEY_VALUE% >> %$LOG_LOCATION%\%$LLOG_FILE%
+	)
+IF NOT DEFINED $ESRI_LICENSE_HOST (
+	REG ADD "%$ARCGIS_LICENSE_HKEY%" /V LICENSE_SERVER /f /d ""
+	IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	VARIABLE: $ARCGIS_LICENSE_HKEY_VALUE: NUL >> %$LOG_LOCATION%\%$LLOG_FILE%
+	)
 :: update Authorization Type
 REG ADD "%$ARCGIS_LICENSE_HKEY%" /V AUTHORIZATION_TYPE /f /d %$AUTHORIZATION_TYPE%
 REG QUERY "%$ARCGIS_LICENSE_HKEY%" /V AUTHORIZATION_TYPE  2> nul > "%$LOG_LOCATION%\var\var_ArcGIS_AUTHORIZATION_TYPE_HKEY_Value.txt"
@@ -398,6 +426,7 @@ if %$INSTALL_DOTNET% EQU 1 GoTo skipNETV
 dotnet --version> %$LOG_LOCATION%\var\dotnet-version.txt
 SET /P $DOTNET_VERSION= < %$LOG_LOCATION%\var\dotnet-version.txt
 IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	VARIABLE: $DOTNET_VERSION: %$DOTNET_VERSION% >> %$LOG_LOCATION%\%$LLOG_FILE%
+REM Should sort by new to old, so newest will always be on top and is what sets the variable for package.
 dir /B /A:-D /O:-D "%$NET_SDK_PACKAGE%"> "%$LOG_LOCATION%\var\NET-SDK_Package.txt"
 for /f "tokens=3 delims=-" %%P IN (%$LOG_LOCATION%\var\NET-SDK_Package.txt) Do echo %%P> "%$LOG_LOCATION%\var\NET-SDK_Package_Version.txt"
 SET /P $NET_SDK_PACKAGE_VERSION= < "%$LOG_LOCATION%\var\NET-SDK_Package_Version.txt"
@@ -487,12 +516,13 @@ IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	VARIABLE: PACKAGE_AL
 IF %PACKAGE_ALREADY_INSTALLED% EQU 1 IF %$LOG_LEVEL_INFO% EQU 1 ECHO %$ISO_DATE% %TIME% [INFO]	ArcGIS Pro update package {%ARCGISPRO_UPDATE_PACKAGE%} already installed! >> %$LOG_LOCATION%\%$LLOG_FILE%
 IF %PACKAGE_ALREADY_INSTALLED% EQU 1 GoTo skipAPP
 
-:: This is needed in case main ArcGIS Pro doesn't run, to retrieve msp packages
-ROBOCOPY "%$PACKAGE_SOURCE%\%ARCGISPRO_FOLDER%" "%$PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%" /NP /NDL /NFL /R:2 /W:5 *.msp /LOG+:"%$LOG_LOCATION%\%$LLOG_FILE%"
+
 
 :runAPP
 :: Execute the update package
 IF %$LOG_LEVEL_INFO% EQU 1 ECHO %$ISO_DATE% %TIME% [INFO]	Installing ArcGIS Pro [%ARCGISPRO_UPDATE_PACKAGE%] patch... >> %$LOG_LOCATION%\%$LLOG_FILE%
+:: This is needed in case main ArcGIS Pro doesn't run, to retrieve msp packages
+ROBOCOPY "%$PACKAGE_SOURCE%\%ARCGISPRO_FOLDER%" "%$PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%" /NP /NDL /NFL /R:2 /W:5 *.msp /LOG+:"%$LOG_LOCATION%\%$LLOG_FILE%"
 ECHO Installing ArcGIS Pro patch [%ARCGISPRO_UPDATE_PACKAGE%]...
 IF %PS_STATUS% EQU 1 @powershell Unblock-File -path "%$PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%\%ARCGISPRO_UPDATE_PACKAGE%"
 "%$PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%\%ARCGISPRO_UPDATE_PACKAGE%" /passive /l "%$LOG_LOCATION%\%COMPUTERNAME%_%ARCGISPRO_UPDATE_PACKAGE%.log"
