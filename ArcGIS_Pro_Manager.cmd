@@ -34,8 +34,8 @@ setlocal enableextensions
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 SET $SCRIPT_NAME=ArcGIS_Pro_Manager
-SET $SCRIPT_VERSION=1.12.2
-SET $SCRIPT_BUILD=20241216 1115
+SET $SCRIPT_VERSION=1.12.5
+SET $SCRIPT_BUILD=20251217 0830
 Title %$SCRIPT_NAME% %$SCRIPT_VERSION%
 Prompt AGPM$G
 color 0B
@@ -54,11 +54,11 @@ mode con:lines=45
 ::	consider this the repository location, where the staging folder is located.
 ::	Inside the folder should contain the ArcGISPro.msi
 ::	NETWORK REPOSITORY
-SET "$PACKAGE_SOURCE=\\Orca\research\Software\ESRI\ArcGIS_Pro"
+SET "$PACKAGE_SOURCE=\\SC-Tellus\Software\ESRI\ArcGIS_Pro"
 SET "$PACKAGE_DESTINATION=%PUBLIC%\Downloads"
 
 ::	Microsoft .net sdk dependency package repository
-SET "$NET_SDK_PACKAGE=\\Orca\research\Software\Microsoft\NET
+SET "$NET_SDK_PACKAGE=\\SC-Tellus\Software\Microsoft\NET"
 
 
 :: Log settings
@@ -69,7 +69,7 @@ SET $LLOG_FILE=ArcGIS_Pro_Manager_%COMPUTERNAME%.log
 :: Log Shipping
 ::	Advise network file share location
 ::	if no log server, leave blank
-SET "$LOG_SHIPPING_LOCATION=\\SC-Vanadium\Logs\ArcGISPro"
+SET "$LOG_SHIPPING_LOCATION=\\SC-Tellus\Logs\ArcGISPro"
 
 :: CLEANUP staging and var 
 ::	OFF 0
@@ -90,7 +90,7 @@ SET $LOG_LEVEL_TRACE=0
 :: Turn on debugging regardless of host
 :: 0 = OFF (NO)
 :: 1 = ON (YES)
-SET $DEBUG_MODE=0
+SET $DEBUG_MODE=1
 
 :: Configure a Debugger to auto set all logging
 SET $DEBUGGER_PC=SC-Cavia
@@ -387,7 +387,7 @@ IF NOT DEFINED ARCGISPRO_VERSION SET ARCGISPRO_VERSION=0
 IF %$LOG_LEVEL_TRACE% EQU 1 ECHO %$ISO_DATE% %TIME% [TRACE]	EXIT: Current ArcGIS Pro version. >> %$LOG_LOCATION%\%$LLOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:: Get the currently installed updates of ArcGIS Pro
+:: Get the currently installed patches of ArcGIS Pro
 IF %$LOG_LEVEL_TRACE% EQU 1 ECHO %$ISO_DATE% %TIME% [TRACE]	ENTER: Current ArcGIS Pro Updates... >> %$LOG_LOCATION%\%$LLOG_FILE%
 SET ARCGISPRO_UPDATE=1
 REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Updates 2> nul || SET ARCGISPRO_UPDATE=0
@@ -460,7 +460,7 @@ ROBOCOPY "%$PACKAGE_SOURCE%\%ARCGISPRO_FOLDER%" "%$PACKAGE_DESTINATION%\%ARCGISP
 ::	Only needed when the main installer leaves bad links.
 ::	IF EXIST "%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\ArcGIS\ArcGIS Pro" del /S /Q /F "%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\ArcGIS\ArcGIS Pro"
 :: Check License_URL & Authorization_Type
-IF DEFINED $License_URL IF NOT /I "%$AUTHORIZATION_TYPE%"=="NAMED_USER" GoTo skipC1
+IF DEFINED $License_URL IF /I NOT "%$AUTHORIZATION_TYPE%"=="NAMED_USER" GoTo skipC1
 :: not named_user, can't be defined
 :: $CLEANUP reg key before installer
 REM If License_URL is defined from previous install, installation will fail if AUTHORIZATION_TYPE=Concurrent
@@ -470,7 +470,7 @@ REG ADD HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Settings /V License_URL /f /d
 :: Execute the installer
 IF NOT DEFINED ARCGISPRO_FOLDER GoTo skipAGSPI
 ECHO Installing ArcGIS Pro latest version...
-msiexec /i "%$PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%\ArcGISPro.msi" INSTALLDIR="%$INSTALLDIR%" ALLUSERS=%$ALLUSERS% ENABLEEUEI=%$ENABLEEUEI% ACCEPTEULA=%$ACCEPTEULA% BLOCKADDINS=%$BLOCKADDINS% CHECKFORUPDATESATSTARTUP=%$CHECKFORUPDATESATSTARTUP% ESRI_LICENSE_HOST=^%$ESRI_LICENSE_HOST% SOFTWARE_CLASS=%$SOFTWARE_CLASS% AUTHORIZATION_TYPE=%$AUTHORIZATION_TYPE% LOCK_AUTH_SETTINGS=%$LOCK_AUTH_SETTINGS% ArcGIS_Connection=%$ArcGIS_Connection% Portal_List="%$Portal_List%" License_URL="%$License_URL%" /qb
+msiexec /i "%$PACKAGE_DESTINATION%\%ARCGISPRO_FOLDER%\ArcGISPro.msi" INSTALLDIR="%$INSTALLDIR%" ALLUSERS=%$ALLUSERS% ENABLEEUEI=%$ENABLEEUEI% ACCEPTEULA=%$ACCEPTEULA% BLOCKADDINS=%$BLOCKADDINS% CHECKFORUPDATESATSTARTUP=%$CHECKFORUPDATESATSTARTUP% SOFTWARE_CLASS=%$SOFTWARE_CLASS% AUTHORIZATION_TYPE=%$AUTHORIZATION_TYPE% LOCK_AUTH_SETTINGS=%$LOCK_AUTH_SETTINGS% ArcGIS_Connection=%$ArcGIS_Connection% Portal_List="%$Portal_List%" License_URL="%$License_URL%" /qb
 :skipAGSPI
 SET ARCGISPRO_INSTALL_ERROR=%ERRORLEVEL%
 IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	ARCGISPRO_INSTALL_ERROR: %ARCGISPRO_INSTALL_ERROR% >> %$LOG_LOCATION%\%$LLOG_FILE%
@@ -484,9 +484,10 @@ IF %$LOG_LEVEL_INFO% EQU 1 ECHO %$ISO_DATE% %TIME% [INFO]	Checking if patch inst
 ECHO Checking on update packages...
 :trapAPP
 SET PACKAGE_ALREADY_INSTALLED=0
-REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro\Updates /S /v "NAME" 2> nul && SET PACKAGE_ALREADY_INSTALLED=1
+
 dir /B /A:-D "%$PACKAGE_SOURCE%\%ARCGISPRO_FOLDER%" | FIND /I ".msp" 2> nul > %$LOG_LOCATION%\var\var_ArcGISPro_updatePackage.txt
 SET /P ARCGISPRO_UPDATE_PACKAGE= < "%$LOG_LOCATION%\var\var_ArcGISPro_updatePackage.txt"
+
 IF %$LOG_LEVEL_DEBUG% EQU 1 ECHO %$ISO_DATE% %TIME% [DEBUG]	VARIABLE: ARCGISPRO_UPDATE_PACKAGE: %ARCGISPRO_UPDATE_PACKAGE% >> %$LOG_LOCATION%\%$LLOG_FILE%
 IF NOT DEFINED ARCGISPRO_UPDATE_PACKAGE GoTo skipAPP
 IF %PACKAGE_ALREADY_INSTALLED% EQU 0 GoTo runAPP
